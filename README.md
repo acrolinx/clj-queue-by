@@ -32,24 +32,34 @@ and call `queue-by`:
     (ns test-the-queue.core
        (:require [com.acrolinx.clj-queue-by :as q]))
     
-    (def the-queue (q/queue-by :name))
+    (def queue (q/queue-by :name))
 
-You can store the queue in an atom or as a local variable that you
-pass around. In this example, we stick to the default queue size of
-128.
+Here we create the queue with a `key-fn` `:name`, so items will get a
+dedicated queue per `:name`. You can store the queue in an atom,
+too. Alternatively, create it as a local variable and pass it
+around.
+
+The queue has a maximum size. In this example, we stick to the default
+queue size of 128. If you want to have a different limit, call it with
+a second argument:
+
+    (def queue (atom nil))
+    (defn create-queue [size]
+      (q/queue-by :user size))
+    (swap! queue create-queue 1000)
 
 When you try to push more items than the limit, an exception is thrown.
     
-Add an item to the queue by calling it with an argument:
+Add an item to the queue by calling it with the item as the argument:
 
-    (the-queue {:name "alice" :a 1})
+    (queue {:name "alice" :a 1})
 
 Calling the queue like a function works, because it implements the
 `IFn` interface which is used when calling functions in Clojure.
 
 How many items are in the queue?
 
-    (count the-queue)
+    (count queue)
 
 The queue implements `Counted`, the interface behind the `count`
 function. Performance guarantees are inherited from Clojure's hash map
@@ -57,8 +67,8 @@ and `clojure.lang.PersistentQueue` which are used under the hood.
     
 What's inside the queue?
 
-    (deref the-queue)
-    @the-queue
+    (deref queue)
+    @queue
 
 Dereferencing the queue returns a two-element vector: first the
 current snapshot queue (a `clojure.lang.PersistentQueue`), second a
@@ -69,7 +79,7 @@ dereferenced information can be used for monitoring.
 Finally, read an item from the queue by calling it without an
 argument.
 
-    (the-queue)
+    (queue)
 
 You probably want to read from the queue on a different thread. Make
 sure to catch all exceptions to keep the thread running. Loop with a
