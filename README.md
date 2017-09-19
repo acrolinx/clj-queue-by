@@ -5,7 +5,7 @@ A queue which schedules fairly by key.
 ## Motivation
 
 We developed this library with a program in mind that requires a
-central in-memory queue. The queu should allow the program to serve
+central in-memory queue. The queue must allow the program to serve
 active users in a timely manner while still ensuring that users with
 massive traffic get their job done eventually.
 
@@ -21,21 +21,22 @@ too.
 
 ## Usage
 
-To use this library in your project, add this to your `:dependencies`
-in your `project.clj` or `build.boot`:
+To use this library in your project, add the following to your
+`:dependencies` in your `project.clj` or `build.boot`:
 
     [com.acrolinx.clj-queue-by "0.1.0"]
 
-To create a new queue, `require` the `com.acrolinx.clj-queue-by`
-namespace and call `queue-by`:
+To create a queue, `require` the `com.acrolinx.clj-queue-by` namespace
+and call `queue-by`:
 
     (ns test-the-queue.core
        (:require [com.acrolinx.clj-queue-by :as q]))
     
     (def the-queue (q/queue-by :name))
 
-You can store this in an atom or as a local variable that you pass
-around. In this example, we stick to the default queue size of 128.
+You can store the queue in an atom or as a local variable that you
+pass around. In this example, we stick to the default queue size of
+128.
 
 When you try to push more items than the limit, an exception is thrown.
     
@@ -43,8 +44,8 @@ Add an item to the queue by calling it with an argument:
 
     (the-queue {:name "alice" :a 1})
 
-This works, because the queue implements the `IFn` interface which is
-used when calling functions in Clojure.
+Calling the queue like a function works, because it implements the
+`IFn` interface which is used when calling functions in Clojure.
 
 How many items are in the queue?
 
@@ -54,25 +55,27 @@ The queue implements `Counted`, the interface behind the `count`
 function. Performance guarantees are inherited from Clojure's hash map
 and `clojure.lang.PersistentQueue` which are used under the hood.
     
-What is inside of the queue?
+What's inside the queue?
 
     (deref the-queue)
     @the-queue
 
-This returns a two-element vector: first the current snapshot queue (a
-`clojure.lang.PersistentQueue`), second a hash-map with the per-user
-queues (again `clojure.lang.PersistentQueue`).  Works by implementing
-`IDeref`.  The dereferenced information can be used for monitoring.
+Dereferencing the queue returns a two-element vector: first the
+current snapshot queue (a `clojure.lang.PersistentQueue`), second a
+hash-map with the per-user queues (again
+`clojure.lang.PersistentQueue`). Works by implementing `IDeref`. The
+dereferenced information can be used for monitoring.
     
 Finally, read an item from the queue by calling it without an
 argument.
 
     (the-queue)
 
-You probably want to do this on a different thread. Make sure to catch
-all exceptions to keep the thread running. Loop with a suitable sleep
-time in between or use other notification mechanisms to trigger the
-reading.  This returns `nil` when no item is in the queue.
+You probably want to read from the queue on a different thread. Make
+sure to catch all exceptions to keep the thread running. Loop with a
+suitable sleep time in between or use other notification mechanisms to
+trigger the reading. Reading from the queue returns `nil` when no item
+is in the queue.
 
 ## Nil
 
@@ -83,16 +86,16 @@ queue was empty.
 ## Comparison with core.async
 
 * The `core.async` library is much more sophisticated and much more
-  powerful. At the same time it is also harder to use. 
+  powerful. At the same time, it is also harder to use.
 * `clj-queue-by` doesn't support transducers while `core.async` does.
 * The buffers in `core.async` which back the channels are surprisingly
-  intransparent. You can't look into them or log when things are
-  being dropped. Also, channels do not support derefing and
+  intransparent. You can't look into them or log when things are being
+  dropped. Also, channels do not support derefing and
   counting. Probably for good reasons, but the use-case that triggered
   the development of `clj-queue-by` required more introspection and
-  transparency. In `core.async` you can overcome all these
-  limitiations if you implement your own buffer to back a channel. In
-  fact, we did this previously.
+  transparency. In `core.async`, you can overcome all these limitations
+  if you implement your own buffer to back a channel. In fact, we did
+  this previously.
 * `clj-queue-by` is probably only useful on JVM/Clojure and not on
   ClojureScript because it assumes that pushing and popping are done
   on separate threads.
@@ -108,7 +111,7 @@ On the sending and the receiving end, the queue behaves just like any
 other queue. Internally though, items are put into separate queues
 given by the `key-fn` you define.
 
-This is somewhat related to
+The scheduling mechanism is somewhat related to
 the
 [Completely Fair Scheduling](https://en.wikipedia.org/wiki/Completely_Fair_Scheduler) algorithm
 used in the Linux Kernel and
@@ -116,13 +119,13 @@ the
 [Fair Scheduler](https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/FairScheduler.html) used
 in Apache Hadoop.
 
-Imagine having a hash-map items with a `:name` key in it:
+Imagine having hash-map items with a `:name` key in it:
 
      {:name "alice"
       :data 1}
 
-If you push several items with different names into the queue, it will
-create separate queues per key.
+If you push several items with different names into the queue, it
+creates separate queues per key.
 
     "alice": item1, item2
     "bob":   item3
@@ -146,7 +149,7 @@ After these pushes, the queue looks like this internally:
            {:name "alice" :data 3},
     bob:   {:name "bob"   :data "x"}
     
-When you start pulling it will deliver the items in this order:
+When you start pulling, it will deliver the items in this order:
 
 1. Pull `{:name "alice" :data 1}`
 2. Pull `{:name "bob"   :data "x"}`
@@ -156,8 +159,8 @@ When you start pulling it will deliver the items in this order:
 Note, how Bob's item got delivered before Alice's second item.
 
 Think of it as taking a snapshot of the heads of the queue when
-polling and then delivering this snapshot. When it is empty, a new
-snapshot is taken.  Actually, this is exactly what happens behind the
+polling and then delivering this snapshot. When it's empty, a new
+snapshot is taken. Actually, this is exactly what happens behind the
 scenes.
 
 Another example:
