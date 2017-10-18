@@ -55,7 +55,7 @@
           (count selected)
           queued))
 
-(defn persistent-data-queue
+(defn- persistent-data-queue
   "Extracts the ::data field from all items in sequence s into a
   PersistentQueue."
   [s]
@@ -78,15 +78,16 @@
   [the-q the-index keyfn max-size it]
   
   (dosync
-   (if (< (queue-count @the-q) max-size)
-     (do
-       (alter the-q update-in [1 (keyfn it)] quonj
-              {::data it
-               ::id   (inc @the-index)})
-       (alter the-index inc))
+   (let [cnt (queue-count @the-q)]
+     (if (< cnt max-size)
+       (do
+         (alter the-q update-in [1 (keyfn it)] quonj
+                {::data it
+                 ::id   (inc @the-index)})
+         (alter the-index inc))
      (throw (ex-info "Queue overflow."
                      {:item it
-                      :current-size (queue-count @the-q)})))))
+                      :current-size cnt}))))))
 
 (defn- pop-from-selected [the-q]
   (let [[selected queued] @the-q
