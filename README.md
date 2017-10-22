@@ -48,11 +48,19 @@ a second argument:
       (q/queue-by :user size))
     (swap! queue create-queue 1000)
 
-When you try to push more items than the limit, an exception is thrown.
-    
 Add an item to the queue by calling it with the item as the argument:
 
     (queue {:name "alice" :a 1})
+
+When you try to push more items than the limit, an exception is
+thrown.
+
+    (def queue (q/queue-by :id 1))
+    (queue {:id 1})
+    (try (queue {:id 2})
+           (catch clojure.lang.ExceptionInfo e
+             (ex-data e)))
+    ;=> {:item {:id 2}, :current-size 1}
 
 Calling the queue like a function works, because it implements the
 `IFn` interface which is used when calling functions in Clojure.
@@ -178,8 +186,7 @@ Another example:
 1. Push `{:name "alice" :data 1}`
 2. Push `{:name "bob"   :data "x"}`
 3. Pull `{:name "alice" :data 1}`. This takes a snapshot and delivers
-   the oldest item. The second item from Bob is now the head of the
-   snapshot.
+   the oldest item. The item from Bob is now the head of the snapshot.
 4. Push `{:name "alice" :data 2}`. This adds the new item after the
    snapshot.
 5. Push `{:name "alice" :data 3}`
@@ -193,8 +200,8 @@ A last example:
 2. Push `{:name "bob"   :data "x"}`
 3. Push `{:name "alice" :data 2}`
 4. Pull `{:name "alice" :data 1}`. This takes a snapshot and delivers
-   the oldest item. The second item from Bob now the head of the
-   snapshot. The second item from Alice stays on her dedicated queue.
+   the oldest item. The item from Bob now the head of the
+   snapshot. The Alice's second item stays on her dedicated queue.
 5. Push `{:name "alice" :data 3}`
 6. Push `{:name "alice" :data 4}`
 7. Pull `{:name "bob"   :data "x"}`. Was head of the snapshot.
