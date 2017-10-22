@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [com.acrolinx.clj-queue-by :as tt]))
 
-(deftest t-quonj
+(deftest quonj-test
   (let [t #'tt/quonj]
     (testing "Adding to empty"
       (let [it (t nil :x)]
@@ -17,7 +17,7 @@
         (is (= [:x :y] it2))))))
 
 
-(deftest queue-sizes
+(deftest queue-sizes-test
   (let [q (tt/queue-by :key)]
     (testing "Empty"
       (is (= 0 (count q))))
@@ -49,7 +49,7 @@
       (q)
       (is (= 0 (count q))))))
 
-(deftest queue-core-principles
+(deftest queue-core-principles-test
   (let [q (tt/queue-by :core)]
     (testing "Adding one, get it back"
       (q {:core :alice :a :1})
@@ -92,7 +92,7 @@
 
 ;; FIXME: I'd feel better to have some real-world multi-threaded test
 ;; here and run it a 1000 times or so.
-(deftest queue-multi-threaded-basic
+(deftest queue-multi-threaded-basic-test
   (let [q (tt/queue-by :core)]
 
     (testing "Adding many and get them back as expected"
@@ -120,7 +120,7 @@
       (is (= {:core :charlie :a :4} @(future (q))))
       (is (= 0 (count q))))))
 
-(deftest t-overflow
+(deftest overflow-test
   (let [q (tt/queue-by :x 2)]
     (testing "No item added"
       (is (= 0 (count q))))
@@ -135,7 +135,7 @@
            (q {:x 1})))
       (is (= 2 (count q))))))
 
-(deftest t-deref
+(deftest deref-test
   (let [qb (tt/queue-by :i)
         pq (clojure.lang.PersistentQueue/EMPTY)]
 
@@ -148,7 +148,7 @@
       (is (= [pq {"one" (conj pq {:i "one" :x 1})}]
              @qb)))
 
-    (testing "Add two items, same key"
+    (testing "Add another item, same key"
       (qb {:i "one" :x 2})
       (is (= [pq {"one" (-> pq
                             (conj {:i "one" :x 1})

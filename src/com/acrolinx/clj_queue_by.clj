@@ -1,5 +1,8 @@
 (ns com.acrolinx.clj-queue-by)
 
+;; Arbitrary default size
+(def ^:private ^:const DEFAULT-QUEUE-SIZE 128)
+
 ;;; Persistent Queue Helpers
 
 (defmethod print-method clojure.lang.PersistentQueue
@@ -25,7 +28,10 @@
   "Conj x on queue, ensuring q is a persistent queue.
 
   If q is nil, it is created as a clojure.lang.PersistentQueue and x
-  is conj'ed onto it. Otherwise, if q is defined x is just conj'ed."
+  is conj'ed onto it. Otherwise, if q is defined x is just conj'ed.
+
+  Don't waste time checking for correct type as this is an internal fn
+  and we know what to expect."
   [q x]
   (if q (conj q x)
       (persistent-queue x)))
@@ -61,7 +67,7 @@
   [s]
   (persistent-queue (map ::data s)))
 
-(defn- do-deref [the-q]
+(defn- queue-deref [the-q]
   (let [[selected queued] @the-q]
     [(persistent-data-queue selected)
      (reduce
@@ -81,10 +87,11 @@
    (let [cnt (queue-count @the-q)]
      (if (< cnt max-size)
        (do
+         (alter the-index inc)
          (alter the-q update-in [1 (keyfn it)] quonj
+                ;; uses in-transaction value already inced
                 {::data it
-                 ::id   (inc @the-index)})
-         (alter the-index inc))
+                 ::id   @the-index}))
      (throw (ex-info "Queue overflow."
                      {:item it
                       :current-size cnt}))))))
@@ -93,10 +100,17 @@
   (let [[selected queued] @the-q
         head (peek selected)
         tail (pop selected)]
-    (alter the-q assoc-in [0] tail)
+    (alter the-q assoc 0 tail)
     head))
 
-(defn- peeks-and-pops [queue-map]
+(defn- peeks-and-pops
+  "Returns the snapshot and remainder of the queues in QUEUE-MAP.
+
+  This iterates over all the queues in QUEUE-MAP and computes the head
+  and tails of each. The heads become a new persistent queue, ordered
+  by time of arrival in the queue. The tails become the new
+  sub-queues."
+  [queue-map]
   (loop [heads     (persistent-empty-queue)
          tails     {}
          queue-data queue-map]
@@ -115,23 +129,22 @@
 
 (defn- select-snapshot! [the-q]
   (let [[heads tails] (peeks-and-pops (second @the-q))]
-    (alter the-q assoc-in [0] heads)
-    (alter the-q assoc-in [1] tails)))
+    (alter the-q assoc 0 heads)
+    (alter the-q assoc 1 tails)))
 
-;; This is where the hard work is done.
-;; Need to transparently take a snapshot of all leading items in all
-;; current queues.
-;; Then remove those items from the internal queues
-(defn- queue-pop [the-q]
+(defn- queue-pop
+  "Pops an item from the queue.
+
+  This is where the hard work is done.  Need to transparently take a
+  snapshot of all leading items in all current queues. Then remove
+  those items from the internal queues."
+  [the-q]
   (dosync
    (let [[selected queued] @the-q
          selected-size (count selected)]
      (when (= 0 selected-size)
        (select-snapshot! the-q))
      (::data (pop-from-selected the-q)))))
-
-;; for no particular reason
-(def ^:private ^:const DEFAULT-QUEUE-SIZE 128)
 
 (defn queue-by
   ([keyfn]
@@ -147,7 +160,7 @@
          (queue-count @the-q))
 
        clojure.lang.IDeref
-       (deref [this] (do-deref the-q))
+       (deref [this] (queue-deref the-q))
 
        clojure.lang.IFn
        ;; zero args: read a value

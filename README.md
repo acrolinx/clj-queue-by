@@ -39,14 +39,14 @@ dedicated queue per `:name`. You can store the queue in an atom,
 too. Alternatively, create it as a local variable and pass it
 around.
 
+For a detailed description of the scheduling algorithm per key,
+see [The Scheduling Mechanism](#the-scheduling-mechanism) below.
+
 The queue has a maximum size. In this example, we stick to the default
 queue size of 128. If you want to have a different limit, call it with
 a second argument:
 
-    (def queue (atom nil))
-    (defn create-queue [size]
-      (q/queue-by :user size))
-    (swap! queue create-queue 1000)
+    (def queue (q/queue-by :name) 1000)
 
 Add an item to the queue by calling it with the item as the argument:
 
@@ -80,7 +80,7 @@ What's inside the queue?
 
 Dereferencing the queue returns a two-element vector: first the
 current snapshot queue (a `clojure.lang.PersistentQueue`), second a
-hash-map with the per-user queues (again
+hash-map with the per-key queues (again
 `clojure.lang.PersistentQueue`). Works by implementing `IDeref`. The
 dereferenced information can be used for monitoring.
     
