@@ -101,6 +101,9 @@ The queue allows you to add `nil` items but you won't be able to
 distinguish at the receiving end if `nil` was in the queue or the
 queue was empty.
 
+Also, `nil` gets its own queue when the `key-fn` returns `nil` just as
+any other value.
+
 ## Comparison with core.async
 
 * The `core.async` library is much more sophisticated and much more
