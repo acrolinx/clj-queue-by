@@ -118,9 +118,6 @@ queue was empty.
   transparency. In `core.async`, you can overcome all these limitations
   if you implement your own buffer to back a channel. In fact, we did
   this previously.
-* `clj-queue-by` is probably only useful on JVM/Clojure and not on
-  ClojureScript because it assumes that pushing and popping are done
-  on separate threads.
 * `core.async` is battle-proven and has shown that it runs well in
   production. `clj-queue-by` is just beginning to show it. 
 * Channels in `core.async` are meant to be used a lot. You can easily
