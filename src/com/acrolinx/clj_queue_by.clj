@@ -111,21 +111,14 @@
   by time of arrival in the queue. The tails become the new
   sub-queues."
   [queue-map]
-  (loop [heads     (persistent-empty-queue)
-         tails     {}
-         queue-data queue-map]
-    (if (seq queue-data)
-      (let [[k queue-val] (first queue-data)
-            this-head     (peek queue-val)
-            this-tail     (pop queue-val)]
-        
-          (recur (conj heads this-head)
-                 (if (empty? this-tail)
-                   tails
-                   (assoc tails k this-tail)) 
-                 (next queue-data)))
-      [(persistent-queue (sort-by ::id heads))
-       tails])))
+  (let [[heads tails]
+        (reduce-kv (fn [[head-acc tail-acc] k queue]
+                     [(conj head-acc (peek queue))
+                      (assoc tail-acc k (pop queue))])
+                   [[] {}]
+                   queue-map)]
+    [(persistent-queue (sort-by ::id heads))
+     (into {} (filter (fn [[k queue]] (not-empty queue)) tails))]))
 
 (defn- select-snapshot! [the-q]
   (let [[heads tails] (peeks-and-pops (second @the-q))]

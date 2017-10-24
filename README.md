@@ -200,8 +200,8 @@ A last example:
 2. Push `{:name "bob"   :data "x"}`
 3. Push `{:name "alice" :data 2}`
 4. Pull `{:name "alice" :data 1}`. This takes a snapshot and delivers
-   the oldest item. The item from Bob now the head of the
-   snapshot. The Alice's second item stays on her dedicated queue.
+   the oldest item. The item from Bob is now the head of the
+   snapshot. Alice's second item stays on her dedicated queue.
 5. Push `{:name "alice" :data 3}`
 6. Push `{:name "alice" :data 4}`
 7. Pull `{:name "bob"   :data "x"}`. Was head of the snapshot.
