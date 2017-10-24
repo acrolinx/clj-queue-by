@@ -97,11 +97,7 @@ argument.
 
     (queue)
 
-You probably want to read from the queue on a different thread. Make
-sure to catch all exceptions to keep the thread running. Loop with a
-suitable sleep time in between or use other notification mechanisms to
-trigger the reading. Reading from the queue returns `nil` when no item
-is in the queue.
+Reading from the queue returns `nil` when no item is in the queue.
 
 ## Nil
 
