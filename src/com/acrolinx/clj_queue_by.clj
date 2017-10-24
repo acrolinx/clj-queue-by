@@ -79,22 +79,22 @@
 (defn- queue-push
   "Backend function to perform the push to the queue.
 
-  Throws exception when MAX-SIZE is reached.
+  Throws exception when MAX-SIZE is non-nil and reached.
   Alters internal queue and index state by side-effect."
   [the-q the-index keyfn max-size it]
   
   (dosync
-   (let [cnt (queue-count @the-q)]
-     (if (< cnt max-size)
-       (do
-         (alter the-index inc)
-         (alter the-q update-in [1 (keyfn it)] quonj
-                ;; uses in-transaction value already inced
-                {::data it
-                 ::id   @the-index}))
-     (throw (ex-info "Queue overflow."
-                     {:item it
-                      :current-size cnt}))))))
+   (when max-size
+     (let [cnt (queue-count @the-q)]
+       (when (>= cnt max-size)
+         (throw (ex-info "Queue overflow."
+                         {:item it
+                          :current-size cnt})))))
+   (alter the-index inc)
+   (alter the-q update-in [1 (keyfn it)] quonj
+          ;; uses in-transaction value already inced
+          {::data it
+           ::id   @the-index})))
 
 (defn- pop-from-selected [the-q]
   (let [[selected queued] @the-q

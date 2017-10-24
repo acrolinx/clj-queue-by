@@ -42,11 +42,19 @@ around.
 For a detailed description of the scheduling algorithm per key,
 see [The Scheduling Mechanism](#the-scheduling-mechanism) below.
 
-The queue has a maximum size. In this example, we stick to the default
-queue size of 128. If you want to have a different limit, call it with
-a second argument:
+The queue can have a maximum size. In the first example, we stick to
+the default maximum of 128:
+
+    (def queue (q/queue-by :name))
+
+If you want to have a different limit, call it with a second argument:
 
     (def queue (q/queue-by :name) 1000)
+
+If the second argument is an explicit `nil` the queue is unbounded and
+no size checks are performed. Use at your own risk.
+
+    (def queue (q/queue-by :name) nil)
 
 Add an item to the queue by calling it with the item as the argument:
 
