@@ -79,22 +79,22 @@
 (defn- queue-push
   "Backend function to perform the push to the queue.
 
-  Throws exception when MAX-SIZE is reached.
+  Throws exception when MAX-SIZE is non-nil and reached.
   Alters internal queue and index state by side-effect."
   [the-q the-index keyfn max-size it]
   
   (dosync
-   (let [cnt (queue-count @the-q)]
-     (if (< cnt max-size)
-       (do
-         (alter the-index inc)
-         (alter the-q update-in [1 (keyfn it)] quonj
-                ;; uses in-transaction value already inced
-                {::data it
-                 ::id   @the-index}))
-     (throw (ex-info "Queue overflow."
-                     {:item it
-                      :current-size cnt}))))))
+   (when max-size
+     (let [cnt (queue-count @the-q)]
+       (when (>= cnt max-size)
+         (throw (ex-info "Queue overflow."
+                         {:item it
+                          :current-size cnt})))))
+   (alter the-index inc)
+   (alter the-q update-in [1 (keyfn it)] quonj
+          ;; uses in-transaction value already inced
+          {::data it
+           ::id   @the-index})))
 
 (defn- pop-from-selected [the-q]
   (let [[selected queued] @the-q
@@ -111,21 +111,14 @@
   by time of arrival in the queue. The tails become the new
   sub-queues."
   [queue-map]
-  (loop [heads     (persistent-empty-queue)
-         tails     {}
-         queue-data queue-map]
-    (if (seq queue-data)
-      (let [[k queue-val] (first queue-data)
-            this-head     (peek queue-val)
-            this-tail     (pop queue-val)]
-        
-          (recur (conj heads this-head)
-                 (if (empty? this-tail)
-                   tails
-                   (assoc tails k this-tail)) 
-                 (next queue-data)))
-      [(persistent-queue (sort-by ::id heads))
-       tails])))
+  (let [[heads tails]
+        (reduce-kv (fn [[head-acc tail-acc] k queue]
+                     [(conj head-acc (peek queue))
+                      (assoc tail-acc k (pop queue))])
+                   [[] {}]
+                   queue-map)]
+    [(persistent-queue (sort-by ::id heads))
+     (into {} (filter (fn [[k queue]] (not-empty queue)) tails))]))
 
 (defn- select-snapshot! [the-q]
   (let [[heads tails] (peeks-and-pops (second @the-q))]

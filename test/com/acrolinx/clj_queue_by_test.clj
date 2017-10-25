@@ -133,7 +133,18 @@
            clojure.lang.ExceptionInfo
            #"overflow"
            (q {:x 1})))
-      (is (= 2 (count q))))))
+      (is (= 2 (count q)))))
+  (let [q (tt/queue-by :x)]
+    (testing "Adding more values than allowed (default size)"
+      (dotimes [i @#'com.acrolinx.clj-queue-by/DEFAULT-QUEUE-SIZE] (q {:x 2}))
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo
+           #"overflow"
+           (q {:x 1})))))
+  (let [q (tt/queue-by :x nil)]
+    (testing "Adding more values than allowed per default to unbounded queue"
+      (dotimes [i @#'com.acrolinx.clj-queue-by/DEFAULT-QUEUE-SIZE] (q {:x 2}))
+      (q {:x 1}))))
 
 (deftest deref-test
   (let [qb (tt/queue-by :i)

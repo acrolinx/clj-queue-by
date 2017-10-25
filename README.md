@@ -42,11 +42,19 @@ around.
 For a detailed description of the scheduling algorithm per key,
 see [The Scheduling Mechanism](#the-scheduling-mechanism) below.
 
-The queue has a maximum size. In this example, we stick to the default
-queue size of 128. If you want to have a different limit, call it with
-a second argument:
+The queue can have a maximum size. In the first example, we stick to
+the default maximum of 128:
+
+    (def queue (q/queue-by :name))
+
+If you want to have a different limit, call it with a second argument:
 
     (def queue (q/queue-by :name) 1000)
+
+If the second argument is an explicit `nil` the queue is unbounded and
+no size checks are performed. Use at your own risk.
+
+    (def queue (q/queue-by :name) nil)
 
 Add an item to the queue by calling it with the item as the argument:
 
@@ -89,11 +97,7 @@ argument.
 
     (queue)
 
-You probably want to read from the queue on a different thread. Make
-sure to catch all exceptions to keep the thread running. Loop with a
-suitable sleep time in between or use other notification mechanisms to
-trigger the reading. Reading from the queue returns `nil` when no item
-is in the queue.
+Reading from the queue returns `nil` when no item is in the queue.
 
 ## Nil
 
@@ -117,9 +121,6 @@ any other value.
   transparency. In `core.async`, you can overcome all these limitations
   if you implement your own buffer to back a channel. In fact, we did
   this previously.
-* `clj-queue-by` is probably only useful on JVM/Clojure and not on
-  ClojureScript because it assumes that pushing and popping are done
-  on separate threads.
 * `core.async` is battle-proven and has shown that it runs well in
   production. `clj-queue-by` is just beginning to show it. 
 * Channels in `core.async` are meant to be used a lot. You can easily
@@ -203,8 +204,8 @@ A last example:
 2. Push `{:name "bob"   :data "x"}`
 3. Push `{:name "alice" :data 2}`
 4. Pull `{:name "alice" :data 1}`. This takes a snapshot and delivers
-   the oldest item. The item from Bob now the head of the
-   snapshot. The Alice's second item stays on her dedicated queue.
+   the oldest item. The item from Bob is now the head of the
+   snapshot. Alice's second item stays on her dedicated queue.
 5. Push `{:name "alice" :data 3}`
 6. Push `{:name "alice" :data 4}`
 7. Pull `{:name "bob"   :data "x"}`. Was head of the snapshot.
