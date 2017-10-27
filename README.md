@@ -152,9 +152,9 @@ creates separate queues per key.
     "alice": item1, item2
     "bob":   item3
 
-Now, if Alice puts many items into the queue and the consumption of
-the items takes a while, Bob would have to wait a long time for his
-thing to happen.
+Now, if Alice puts many items into a common FIFO queue and the
+consumption of the items takes a while, Bob would have to wait a long
+time for his thing to happen.
 
 To solve this problem, this queue implementation always takes off the
 leading items of the queue per user and delivers them.
