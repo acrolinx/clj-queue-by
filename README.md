@@ -268,6 +268,26 @@ went through the following internal states (empty queues suppressed):
     11.
     -> Returned: alice/data 4
 
+## Contributing
+
+This project accepts pull request from registered authors. We ask you
+to sign our Contributor License Agreement first. Please reach out to
+us at https://www.acrolinx.com/contact/ so that we can prepare
+everything.
+
+Don't panic. It is just some easy legalese that helps us maintain the
+availability of this software for everyone.
+
+## Contributors
+
+* @replrep :computer: :mag:
+* @nblumoe :mag:
+
+Type of contribution:
+
+* :mag: Feedback, review
+* :computer: Code, pull request
+
 ## License
 
 Copyright © 2017 Acrolinx GmbH
