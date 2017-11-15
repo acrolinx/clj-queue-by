@@ -4,7 +4,11 @@
   :license {:name "Apache License 2.0"
             :url "http://www.apache.org/licenses/"}
   :deploy-repositories [["releases"
-                         {:url "https://repo.clojars.org/"
+                         {:url "https://clojars.org/repo"
+                          :password :env/CLOJARS_PASS
+                          :username :env/CLOJARS_USER}]
+                        ["snapshots"
+                         {:url "https://clojars.org/repo"
                           :password :env/CLOJARS_PASS
                           :username :env/CLOJARS_USER}]]
   :dependencies [[org.clojure/clojure "1.8.0"]])
