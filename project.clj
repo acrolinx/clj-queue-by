@@ -6,7 +6,8 @@
   :deploy-repositories [["releases"
                          {:url "https://clojars.org/repo"
                           :password :env/CLOJARS_PASS
-                          :username :env/CLOJARS_USER}]
+                          :username :env/CLOJARS_USER
+                          :sign-releases false}]
                         ["snapshots"
                          {:url "https://clojars.org/repo"
                           :password :env/CLOJARS_PASS
