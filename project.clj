@@ -1,4 +1,4 @@
-(defproject com.acrolinx/clj-queue-by "0.1.0-SNAPSHOT"
+(defproject com.acrolinx/clj-queue-by "0.1.0"
   :description "A queue which schedules by key."
   :url "http://github.com/acrolinx/clj-queue-by"
   :license {:name "Apache License 2.0"
