@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/acrolinx/clj-queue-by.svg?branch=master)](https://travis-ci.org/acrolinx/clj-queue-by)
+
 # Queue-by
 
 A queue which schedules fairly by key.
