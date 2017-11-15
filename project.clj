@@ -1,5 +1,5 @@
 (defproject com.acrolinx/clj-queue-by "0.1.2-SNAPSHOT"
-  :description "A queue which schedules by key."
+  :description "A queue which schedules fairly by key."
   :url "http://github.com/acrolinx/clj-queue-by"
   :license {:name "Apache License 2.0"
             :url "http://www.apache.org/licenses/"}
