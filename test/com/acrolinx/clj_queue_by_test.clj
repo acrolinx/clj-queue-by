@@ -220,9 +220,6 @@
         w1 (future (stress-writer q "t1" 900))
         w2 (future (stress-writer q "t2" 900))
         w3 (future (stress-writer q "t3" 900))]
-    (println @w1)
-    (println @w2)
-    (println @w3)
     (= @r {"t1" 900, "t2" 900, "t3" 900})))
 
 (deftest stress-test
