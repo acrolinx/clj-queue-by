@@ -24,7 +24,7 @@ too.
 To use this library in your project, add the following to your
 `:dependencies` in your `project.clj` or `build.boot`:
 
-    [com.acrolinx.clj-queue-by "0.1.0"]
+    [com.acrolinx.clj-queue-by "0.1.1"]
 
 To create a queue, `require` the `com.acrolinx.clj-queue-by` namespace
 and call `queue-by`:
