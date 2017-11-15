@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/acrolinx/clj-queue-by.svg?branch=master)](https://travis-ci.org/acrolinx/clj-queue-by)
+[![Clojars Project](https://img.shields.io/clojars/v/com.acrolinx/clj-queue-by.svg)](https://clojars.org/com.acrolinx/clj-queue-by)
 
 # Queue-by
 
