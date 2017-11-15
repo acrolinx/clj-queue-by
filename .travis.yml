@@ -1,1 +1,4 @@
 language: clojure
+sudo: false
+
+script: lein do test, deploy
