@@ -154,27 +154,30 @@
        (select-snapshot! the-q))
      (::data (pop-from-selected the-q)))))
 
+(deftype QueueByQueue [the-q the-index keyfn max-q-size]
+  clojure.lang.Counted
+  (count [this]
+    (queue-count @the-q))
+
+  clojure.lang.IDeref
+  (deref [this] (queue-deref the-q))
+
+  clojure.lang.IFn
+  ;; zero args: read a value
+  (invoke [this]
+    (queue-pop the-q))
+  ;; one arg: add the value
+  (invoke [this it]
+    (queue-push the-q the-index keyfn max-q-size it)
+    this))
+
 (defn queue-by
   ([keyfn]
    (queue-by keyfn DEFAULT-QUEUE-SIZE))
   ([keyfn max-q-size]
    (let [the-q (ref (internal-queue))
          the-index (ref 0)]
-     ;;FIXME: defrecord or deftype to be able to override print-method
-     (reify
-
-       clojure.lang.Counted
-       (count [this]
-         (queue-count @the-q))
-
-       clojure.lang.IDeref
-       (deref [this] (queue-deref the-q))
-
-       clojure.lang.IFn
-       ;; zero args: read a value
-       (invoke [this]
-         (queue-pop the-q))
-       ;; one arg: add the value
-       (invoke [this it]
-         (queue-push the-q the-index keyfn max-q-size it)
-         this)))))
+     (QueueByQueue. the-q
+                    the-index
+                    keyfn
+                    max-q-size))))
