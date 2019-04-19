@@ -13,20 +13,23 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 (ns com.acrolinx.clj-queue-by-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest testing is]]
             [com.acrolinx.clj-queue-by :as tt]))
+
 
 (deftest quonj-test
   (let [t #'tt/quonj]
     (testing "Adding to empty"
       (let [it (t nil :x)]
-        (is (= clojure.lang.PersistentQueue
-             (type it)))
+        (is (= #?(:clj clojure.lang.PersistentQueue
+                  :cljs cljs.core.PersistentQueue)
+               (type it)))
         (is (= [:x] it))))
     (testing "Adding repeatedly"
       (let [it1 (t nil :x)
             it2 (t it1 :y)]
-        (is (= clojure.lang.PersistentQueue
+        (is (= #?(:clj clojure.lang.PersistentQueue
+                  :cljs cljs.core.PersistentQueue)
              (type it2)))
         (is (= [:x :y] it2))))))
 

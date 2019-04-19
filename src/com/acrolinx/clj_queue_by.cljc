@@ -20,13 +20,21 @@
 
 ;;; Persistent Queue Helpers
 
-(defmethod print-method clojure.lang.PersistentQueue
-  [q ^java.io.Writer w]
-  (.write w "#<<")
-  (print-method (sequence q) w))
+#?(:clj
+   (defmethod print-method clojure.lang.PersistentQueue
+              [q ^java.io.Writer w]
+              (.write w "#<<")
+              (print-method (sequence q) w))
+
+   :cljs
+   (extend-type cljs.core.PersistentQueue
+     IPrintWithWriter
+     (-pr-writer [q writer _]
+       (write-all writer "#<< " (sequence q)))))
 
 (defn- persistent-empty-queue []
-  clojure.lang.PersistentQueue/EMPTY)
+  #?(:clj clojure.lang.PersistentQueue/EMPTY
+     :cljs cljs.core/PersistentQueue.EMPTY))
 
 (defn- persistent-queue
   "Create a persistent queue, optionally with init values.
@@ -49,7 +57,7 @@
   and we know what to expect."
   [q x]
   (if q (conj q x)
-      (persistent-queue x)))
+    (persistent-queue x)))
 
 ;; This particular queue implementation
 
@@ -97,7 +105,7 @@
   Throws exception when MAX-SIZE is non-nil and reached.
   Alters internal queue and index state by side-effect."
   [the-q the-index keyfn max-size it]
-  
+
   (dosync
    (when max-size
      (let [cnt (queue-count @the-q)]
@@ -109,7 +117,7 @@
    (alter the-q update-in [1 (keyfn it)] quonj
           ;; uses in-transaction value already inced
           {::data it
-           ::id   @the-index})))
+           ::id @the-index})))
 
 (defn- pop-from-selected [the-q]
   (let [[selected queued] @the-q
@@ -155,21 +163,38 @@
      (::data (pop-from-selected the-q)))))
 
 (deftype QueueByQueue [the-q the-index keyfn max-q-size]
-  clojure.lang.Counted
-  (count [this]
-    (queue-count @the-q))
+  #?@(:clj
+      [clojure.lang.Counted
+       (count [this]
+         (queue-count @the-q))]
+      :cljs
+      [ICounted
+       (-count [this]
+               (queue-count @the-q))])
 
-  clojure.lang.IDeref
-  (deref [this] (queue-deref the-q))
 
-  clojure.lang.IFn
-  ;; zero args: read a value
-  (invoke [this]
-    (queue-pop the-q))
-  ;; one arg: add the value
-  (invoke [this it]
-    (queue-push the-q the-index keyfn max-q-size it)
-    this))
+  #?@(:clj [clojure.lang.IDeref
+            (deref [this] (queue-deref the-q))]
+      :cljs [IDeref
+             (-deref [this] (queue-deref the-q))])
+
+
+  #?@(:clj
+      [clojure.lang.IFn
+       ;; zero args: read a value
+       (invoke [this]
+         (queue-pop the-q))
+       ;; one arg: add the value
+       (invoke [this it]
+         (queue-push the-q the-index keyfn max-q-size it)
+         this)]
+      :cljs
+      [IFn
+       (-invoke [this]
+         (queue-pop the-q))
+       (-invoke [this it]
+         (queue-push the-q the-index keyfn max-q-size it)
+         this)]))
 
 (defn queue-by
   ([keyfn]
