@@ -1,4 +1,4 @@
 language: clojure
 sudo: false
 
-script: lein do test, deploy
+script: lein do test, doo once, deploy
