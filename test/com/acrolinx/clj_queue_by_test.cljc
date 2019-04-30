@@ -117,7 +117,8 @@
       (is (= 2 (count q))))
     (testing "Adding more values than allowed"
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo
+           #?(:clj clojure.lang.ExceptionInfo
+              :cljs cljs.core.ExceptionInfo)
            #"overflow"
            (q {:x 1})))
       (is (= 2 (count q)))))
@@ -125,7 +126,8 @@
     (testing "Adding more values than allowed (default size)"
       (dotimes [i @#'com.acrolinx.clj-queue-by/DEFAULT-QUEUE-SIZE] (q {:x 2}))
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo
+           #?(:clj clojure.lang.ExceptionInfo
+              :cljs cljs.core.ExceptionInfo)
            #"overflow"
            (q {:x 1})))))
   (let [q (tt/queue-by :x nil)]
@@ -135,7 +137,7 @@
 
 (deftest deref-test
   (let [qb (tt/queue-by :i)
-        pq (clojure.lang.PersistentQueue/EMPTY)]
+        pq (#'com.acrolinx.clj-queue-by/persistent-empty-queue)]
 
     (testing "Empty queue"
       (is (= [pq {}]
