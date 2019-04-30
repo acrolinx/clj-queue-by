@@ -71,14 +71,16 @@
   map are created with the key-fn which is passed to the
   constructor."
   []
-  [(persistent-empty-queue) {}])
+  {::selected (persistent-empty-queue)
+   ::queued {}
+   ::the-index 0})
 
 (defn- queue-count
   "Given a derefed queue, returns a count of all items.
 
   Sum of items already selected plus all items in the separate
   queues."
-  [[selected queued]]
+  [{:keys [::selected ::queued]}]
   (reduce (fn [sum [k countable-val]]
             (+ sum (count countable-val)))
           (count selected)
@@ -91,7 +93,7 @@
   (persistent-queue (map ::data s)))
 
 (defn- queue-deref [the-q]
-  (let [[selected queued] @the-q]
+  (let [{:keys [::selected ::queued]} @the-q]
     [(persistent-data-queue selected)
      (reduce
       (fn [acc [k pq]]
@@ -103,27 +105,30 @@
   "Backend function to perform the push to the queue.
 
   Throws exception when MAX-SIZE is non-nil and reached.
-  Alters internal queue and index state by side-effect."
-  [the-q the-index keyfn max-size it]
+  Mutates internal queue."
+  [the-q keyfn max-size it]
 
-  (dosync
-   (when max-size
-     (let [cnt (queue-count @the-q)]
-       (when (>= cnt max-size)
-         (throw (ex-info "Queue overflow."
-                         {:item it
-                          :current-size cnt})))))
-   (alter the-index inc)
-   (alter the-q update-in [1 (keyfn it)] quonj
-          ;; uses in-transaction value already inced
-          {::data it
-           ::id @the-index})))
+  (when max-size
+    (let [cnt (queue-count @the-q)]
+      (when (>= cnt max-size)
+        (throw (ex-info "Queue overflow."
+                        {:item it
+                         :current-size cnt})))))
+  (swap! the-q
+         (fn [{:keys [::the-index] :as q}]
+           (let [new-index (inc the-index)]
+             (-> q
+                 (assoc ::the-index new-index)
+                 (update-in [::queued (keyfn it)] quonj
+                            ;; uses in-transaction value already inced
+                            {::data it
+                             ::id new-index}))))))
 
 (defn- pop-from-selected [the-q]
-  (let [[selected queued] @the-q
+  (let [{:keys [::selected]} @the-q
         head (peek selected)
         tail (pop selected)]
-    (alter the-q assoc 0 tail)
+    (swap! the-q assoc ::selected tail)
     head))
 
 (defn- peeks-and-pops
@@ -144,9 +149,8 @@
      (into {} (filter (fn [[k queue]] (not-empty queue)) tails))]))
 
 (defn- select-snapshot! [the-q]
-  (let [[heads tails] (peeks-and-pops (second @the-q))]
-    (alter the-q assoc 0 heads)
-    (alter the-q assoc 1 tails)))
+  (let [[heads tails] (peeks-and-pops (::queued @the-q))]
+    (swap! the-q assoc ::selected heads ::queued tails)))
 
 (defn- queue-pop
   "Pops an item from the queue.
@@ -155,14 +159,13 @@
   snapshot of all leading items in all current queues. Then remove
   those items from the internal queues."
   [the-q]
-  (dosync
-   (let [[selected queued] @the-q
-         selected-size (count selected)]
-     (when (= 0 selected-size)
-       (select-snapshot! the-q))
-     (::data (pop-from-selected the-q)))))
+  (let [{:keys [::selected]} @the-q
+        selected-size (count selected)]
+    (when (= 0 selected-size)
+      (select-snapshot! the-q))
+    (::data (pop-from-selected the-q))))
 
-(deftype QueueByQueue [the-q the-index keyfn max-q-size]
+(deftype QueueByQueue [the-q keyfn max-q-size]
   #?@(:clj
       [clojure.lang.Counted
        (count [this]
@@ -186,23 +189,21 @@
          (queue-pop the-q))
        ;; one arg: add the value
        (invoke [this it]
-         (queue-push the-q the-index keyfn max-q-size it)
+         (queue-push the-q keyfn max-q-size it)
          this)]
       :cljs
       [IFn
        (-invoke [this]
          (queue-pop the-q))
        (-invoke [this it]
-         (queue-push the-q the-index keyfn max-q-size it)
+         (queue-push the-q keyfn max-q-size it)
          this)]))
 
 (defn queue-by
   ([keyfn]
    (queue-by keyfn DEFAULT-QUEUE-SIZE))
   ([keyfn max-q-size]
-   (let [the-q (ref (internal-queue))
-         the-index (ref 0)]
-     (QueueByQueue. the-q
-                    the-index
-                    keyfn
-                    max-q-size))))
+   (QueueByQueue. (atom (internal-queue))
+                  keyfn
+                  max-q-size)))
+
