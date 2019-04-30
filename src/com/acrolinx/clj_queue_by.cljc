@@ -22,9 +22,9 @@
 
 #?(:clj
    (defmethod print-method clojure.lang.PersistentQueue
-              [q ^java.io.Writer w]
-              (.write w "#<<")
-              (print-method (sequence q) w))
+     [q ^java.io.Writer w]
+     (.write w "#<<")
+     (print-method (sequence q) w))
 
    :cljs
    (extend-type cljs.core.PersistentQueue
@@ -71,8 +71,8 @@
   map are created with the key-fn which is passed to the
   constructor."
   []
-  {::selected (persistent-empty-queue)
-   ::queued {}
+  {::selected  (persistent-empty-queue)
+   ::queued    {}
    ::the-index 0})
 
 (defn- queue-count
@@ -112,7 +112,7 @@
     (let [cnt (queue-count @the-q)]
       (when (>= cnt max-size)
         (throw (ex-info "Queue overflow."
-                        {:item it
+                        {:item         it
                          :current-size cnt})))))
   (swap! the-q
          (fn [{:keys [::the-index] :as q}]
@@ -122,7 +122,7 @@
                  (update-in [::queued (keyfn it)] quonj
                             ;; uses in-transaction value already inced
                             {::data it
-                             ::id new-index}))))))
+                             ::id   new-index}))))))
 
 (defn- pop-from-selected [the-q]
   (let [{:keys [::selected]} @the-q
