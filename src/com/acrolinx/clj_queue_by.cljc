@@ -64,16 +64,18 @@
 (defn- internal-queue
   "Returns internal representation of the queue.
 
-  The first item of this vector is the current snapshot of already
+  The value of ::selected is the current snapshot of already
   selected items. Its items are returned on pop until the selected
-  queue is empty. Then a new snapshot is taken from the queued items
-  in the map which is the second item of this vector. The keys of the
-  map are created with the key-fn which is passed to the
-  constructor."
+  queue is empty. Then a new snapshot is taken from the ::queued items.
+  The keys within the ::queued map are created with the key-fn
+  which is passed to the constructor.
+
+  ::index is a counter, monotonously increasing on each push to any queue.
+  It is used to guarantee correct order of items when taking a snapshot."
   []
-  {::selected  (persistent-empty-queue)
-   ::queued    {}
-   ::the-index 0})
+  {::selected (persistent-empty-queue)
+   ::queued   {}
+   ::index    0})
 
 (defn- queue-count
   "Given a derefed queue, returns a count of all items.
@@ -115,12 +117,11 @@
                         {:item         it
                          :current-size cnt})))))
   (swap! the-q
-         (fn [{:keys [::the-index] :as q}]
-           (let [new-index (inc the-index)]
+         (fn [{:keys [::index] :as q}]
+           (let [new-index (inc index)]
              (-> q
-                 (assoc ::the-index new-index)
+                 (assoc ::index new-index)
                  (update-in [::queued (keyfn it)] quonj
-                            ;; uses in-transaction value already inced
                             {::data it
                              ::id   new-index}))))))
 
@@ -145,12 +146,11 @@
                       (assoc tail-acc k (pop queue))])
                    [[] {}]
                    queue-map)]
-    [(persistent-queue (sort-by ::id heads))
-     (into {} (filter (fn [[k queue]] (not-empty queue)) tails))]))
+    {::selected (persistent-queue (sort-by ::id heads))
+     ::queued   (into {} (filter (fn [[k queue]] (not-empty queue)) tails))}))
 
 (defn- select-snapshot! [the-q]
-  (let [[heads tails] (peeks-and-pops (::queued @the-q))]
-    (swap! the-q assoc ::selected heads ::queued tails)))
+  (swap! the-q merge (peeks-and-pops (::queued @the-q))))
 
 (defn- queue-pop
   "Pops an item from the queue.
