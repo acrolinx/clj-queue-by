@@ -126,11 +126,9 @@
                              ::id   new-index}))))))
 
 (defn- pop-from-selected [the-q]
-  (let [{:keys [::selected]} @the-q
-        head (peek selected)
-        tail (pop selected)]
-    (swap! the-q assoc ::selected tail)
-    head))
+  (let [{:keys [::selected]} @the-q]
+    (swap! the-q update ::selected pop)
+    (peek selected)))
 
 (defn- peeks-and-pops
   "Returns the snapshot and remainder of the queues in QUEUE-MAP.
@@ -150,7 +148,8 @@
      ::queued   (into {} (filter (fn [[k queue]] (not-empty queue)) tails))}))
 
 (defn- select-snapshot! [the-q]
-  (swap! the-q merge (peeks-and-pops (::queued @the-q))))
+  (swap! the-q (fn [q]
+                 (merge q (peeks-and-pops (::queued q))))))
 
 (defn- queue-pop
   "Pops an item from the queue.
