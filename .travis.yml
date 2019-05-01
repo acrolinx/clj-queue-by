@@ -1,4 +1,12 @@
 language: clojure
 sudo: false
 
-script: lein do test, doo once, deploy
+jobs:
+  include:
+    - name: clj tests
+      script: lein test
+    - name: cljs tests
+      script: lein doo once
+    - stage: deploy
+      script: lein deploy
+      if: branch=master AND event=push AND fork=false
