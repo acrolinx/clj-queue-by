@@ -110,14 +110,14 @@
   Mutates internal queue."
   [the-q keyfn max-size it]
 
-  (when max-size
-    (let [cnt (queue-count @the-q)]
-      (when (>= cnt max-size)
-        (throw (ex-info "Queue overflow."
-                        {:item         it
-                         :current-size cnt})))))
   (swap! the-q
          (fn [{:keys [::index] :as q}]
+           (when max-size
+             (let [cnt (queue-count q)]
+               (when (>= cnt max-size)
+                 (throw (ex-info "Queue overflow."
+                                 {:item         it
+                                  :current-size cnt})))))
            (let [new-index (inc index)]
              (-> q
                  (assoc ::index new-index)
