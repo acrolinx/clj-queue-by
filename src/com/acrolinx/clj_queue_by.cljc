@@ -24,9 +24,9 @@
    (defmethod print-method clojure.lang.PersistentQueue
      [q ^java.io.Writer w]
      (.write w "#<<")
-     (print-method (sequence q) w))
+     (print-method (sequence q) w)))
 
-   :cljs
+#?(:cljs
    (extend-type cljs.core.PersistentQueue
      IPrintWithWriter
      (-pr-writer [q writer _]
@@ -159,39 +159,39 @@
                    q)))
   (::data (pop-from-selected the-q)))
 
-(deftype QueueByQueue [the-q keyfn max-q-size]
-  #?@(:clj
-      [clojure.lang.Counted
-       (count [this]
-         (queue-count @the-q))]
-      :cljs
-      [ICounted
-       (-count [this]
-               (queue-count @the-q))])
+#?(:clj
+   (deftype QueueByQueue [the-q keyfn max-q-size]
+     clojure.lang.Counted
+     (count [this]
+       (queue-count @the-q))
 
+     clojure.lang.IDeref
+     (deref [this] (queue-deref the-q))
 
-  #?@(:clj [clojure.lang.IDeref
-            (deref [this] (queue-deref the-q))]
-      :cljs [IDeref
-             (-deref [this] (queue-deref the-q))])
+     clojure.lang.IFn
+     ;; zero args: read a value
+     (invoke [this]
+       (queue-pop the-q))
+     ;; one arg: add the value
+     (invoke [this it]
+       (queue-push the-q keyfn max-q-size it)
+       this)))
 
+#?(:cljs
+   (deftype QueueByQueue [the-q keyfn max-q-size]
+     ICounted
+     (-count [this]
+       (queue-count @the-q))
 
-  #?@(:clj
-      [clojure.lang.IFn
-       ;; zero args: read a value
-       (invoke [this]
-         (queue-pop the-q))
-       ;; one arg: add the value
-       (invoke [this it]
-         (queue-push the-q keyfn max-q-size it)
-         this)]
-      :cljs
-      [IFn
-       (-invoke [this]
-         (queue-pop the-q))
-       (-invoke [this it]
-         (queue-push the-q keyfn max-q-size it)
-         this)]))
+     IDeref
+     (-deref [this] (queue-deref the-q))
+
+     IFn
+     (-invoke [this]
+       (queue-pop the-q))
+     (-invoke [this it]
+       (queue-push the-q keyfn max-q-size it)
+       this)))
 
 (defn queue-by
   ([keyfn]
