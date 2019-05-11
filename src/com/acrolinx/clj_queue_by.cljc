@@ -126,9 +126,8 @@
                              ::id   new-index}))))))
 
 (defn- pop-from-selected [the-q]
-  (let [{:keys [::selected]} @the-q]
-    (swap! the-q update ::selected pop)
-    (peek selected)))
+  (let [[old _] (swap-vals! the-q update ::selected pop)]
+    (peek (::selected old))))
 
 (defn- peeks-and-pops
   "Returns the snapshot and remainder of the queues in QUEUE-MAP.

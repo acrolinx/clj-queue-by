@@ -14,7 +14,7 @@
                           :password :env/CLOJARS_PASS
                           :username :env/CLOJARS_USER}]]
 
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.10.520"]]
 
   :plugins [[lein-doo "0.1.11"]
