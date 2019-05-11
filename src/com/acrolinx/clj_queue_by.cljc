@@ -146,10 +146,6 @@
     {::selected (persistent-queue (sort-by ::id heads))
      ::queued   (into {} (filter (fn [[k queue]] (not-empty queue)) tails))}))
 
-(defn- select-snapshot! [the-q]
-  (swap! the-q (fn [q]
-                 (merge q (peeks-and-pops (::queued q))))))
-
 (defn- queue-pop
   "Pops an item from the queue.
 
@@ -157,11 +153,11 @@
   snapshot of all leading items in all current queues. Then remove
   those items from the internal queues."
   [the-q]
-  (let [{:keys [::selected]} @the-q
-        selected-size (count selected)]
-    (when (= 0 selected-size)
-      (select-snapshot! the-q))
-    (::data (pop-from-selected the-q))))
+  (swap! the-q (fn [{:keys [::selected ::queued] :as q}]
+                 (if (= 0 (count selected))
+                   (merge q (peeks-and-pops queued))
+                   q)))
+  (::data (pop-from-selected the-q)))
 
 (deftype QueueByQueue [the-q keyfn max-q-size]
   #?@(:clj
