@@ -20,13 +20,21 @@
 
 ;;; Persistent Queue Helpers
 
-(defmethod print-method clojure.lang.PersistentQueue
-  [q ^java.io.Writer w]
-  (.write w "#<<")
-  (print-method (sequence q) w))
+#?(:clj
+   (defmethod print-method clojure.lang.PersistentQueue
+     [q ^java.io.Writer w]
+     (.write w "#<<")
+     (print-method (sequence q) w)))
+
+#?(:cljs
+   (extend-type cljs.core.PersistentQueue
+     IPrintWithWriter
+     (-pr-writer [q writer _]
+       (write-all writer "#<< " (sequence q)))))
 
 (defn- persistent-empty-queue []
-  clojure.lang.PersistentQueue/EMPTY)
+  #?(:clj clojure.lang.PersistentQueue/EMPTY
+     :cljs cljs.core/PersistentQueue.EMPTY))
 
 (defn- persistent-queue
   "Create a persistent queue, optionally with init values.
@@ -49,28 +57,32 @@
   and we know what to expect."
   [q x]
   (if q (conj q x)
-      (persistent-queue x)))
+    (persistent-queue x)))
 
 ;; This particular queue implementation
 
 (defn- internal-queue
   "Returns internal representation of the queue.
 
-  The first item of this vector is the current snapshot of already
+  The value of ::selected is the current snapshot of already
   selected items. Its items are returned on pop until the selected
-  queue is empty. Then a new snapshot is taken from the queued items
-  in the map which is the second item of this vector. The keys of the
-  map are created with the key-fn which is passed to the
-  constructor."
+  queue is empty. Then a new snapshot is taken from the ::queued items.
+  The keys within the ::queued map are created with the key-fn
+  which is passed to the constructor.
+
+  ::index is a counter, monotonously increasing on each push to any queue.
+  It is used to guarantee correct order of items when taking a snapshot."
   []
-  [(persistent-empty-queue) {}])
+  {::selected (persistent-empty-queue)
+   ::queued   {}
+   ::index    0})
 
 (defn- queue-count
   "Given a derefed queue, returns a count of all items.
 
   Sum of items already selected plus all items in the separate
   queues."
-  [[selected queued]]
+  [{:keys [::selected ::queued]}]
   (reduce (fn [sum [k countable-val]]
             (+ sum (count countable-val)))
           (count selected)
@@ -83,7 +95,7 @@
   (persistent-queue (map ::data s)))
 
 (defn- queue-deref [the-q]
-  (let [[selected queued] @the-q]
+  (let [{:keys [::selected ::queued]} @the-q]
     [(persistent-data-queue selected)
      (reduce
       (fn [acc [k pq]]
@@ -95,28 +107,27 @@
   "Backend function to perform the push to the queue.
 
   Throws exception when MAX-SIZE is non-nil and reached.
-  Alters internal queue and index state by side-effect."
-  [the-q the-index keyfn max-size it]
-  
-  (dosync
-   (when max-size
-     (let [cnt (queue-count @the-q)]
-       (when (>= cnt max-size)
-         (throw (ex-info "Queue overflow."
-                         {:item it
-                          :current-size cnt})))))
-   (alter the-index inc)
-   (alter the-q update-in [1 (keyfn it)] quonj
-          ;; uses in-transaction value already inced
-          {::data it
-           ::id   @the-index})))
+  Mutates internal queue."
+  [the-q keyfn max-size it]
+
+  (swap! the-q
+         (fn [{:keys [::index] :as q}]
+           (when max-size
+             (let [cnt (queue-count q)]
+               (when (>= cnt max-size)
+                 (throw (ex-info "Queue overflow."
+                                 {:item         it
+                                  :current-size cnt})))))
+           (let [new-index (inc index)]
+             (-> q
+                 (assoc ::index new-index)
+                 (update-in [::queued (keyfn it)] quonj
+                            {::data it
+                             ::id   new-index}))))))
 
 (defn- pop-from-selected [the-q]
-  (let [[selected queued] @the-q
-        head (peek selected)
-        tail (pop selected)]
-    (alter the-q assoc 0 tail)
-    head))
+  (let [[old _] (swap-vals! the-q update ::selected pop)]
+    (peek (::selected old))))
 
 (defn- peeks-and-pops
   "Returns the snapshot and remainder of the queues in QUEUE-MAP.
@@ -132,13 +143,8 @@
                       (assoc tail-acc k (pop queue))])
                    [[] {}]
                    queue-map)]
-    [(persistent-queue (sort-by ::id heads))
-     (into {} (filter (fn [[k queue]] (not-empty queue)) tails))]))
-
-(defn- select-snapshot! [the-q]
-  (let [[heads tails] (peeks-and-pops (second @the-q))]
-    (alter the-q assoc 0 heads)
-    (alter the-q assoc 1 tails)))
+    {::selected (persistent-queue (sort-by ::id heads))
+     ::queued   (into {} (filter (fn [[k queue]] (not-empty queue)) tails))}))
 
 (defn- queue-pop
   "Pops an item from the queue.
@@ -147,37 +153,51 @@
   snapshot of all leading items in all current queues. Then remove
   those items from the internal queues."
   [the-q]
-  (dosync
-   (let [[selected queued] @the-q
-         selected-size (count selected)]
-     (when (= 0 selected-size)
-       (select-snapshot! the-q))
-     (::data (pop-from-selected the-q)))))
+  (swap! the-q (fn [{:keys [::selected ::queued] :as q}]
+                 (if (= 0 (count selected))
+                   (merge q (peeks-and-pops queued))
+                   q)))
+  (::data (pop-from-selected the-q)))
 
-(deftype QueueByQueue [the-q the-index keyfn max-q-size]
-  clojure.lang.Counted
-  (count [this]
-    (queue-count @the-q))
+#?(:clj
+   (deftype QueueByQueue [the-q keyfn max-q-size]
+     clojure.lang.Counted
+     (count [this]
+       (queue-count @the-q))
 
-  clojure.lang.IDeref
-  (deref [this] (queue-deref the-q))
+     clojure.lang.IDeref
+     (deref [this] (queue-deref the-q))
 
-  clojure.lang.IFn
-  ;; zero args: read a value
-  (invoke [this]
-    (queue-pop the-q))
-  ;; one arg: add the value
-  (invoke [this it]
-    (queue-push the-q the-index keyfn max-q-size it)
-    this))
+     clojure.lang.IFn
+     ;; zero args: read a value
+     (invoke [this]
+       (queue-pop the-q))
+     ;; one arg: add the value
+     (invoke [this it]
+       (queue-push the-q keyfn max-q-size it)
+       this)))
+
+#?(:cljs
+   (deftype QueueByQueue [the-q keyfn max-q-size]
+     ICounted
+     (-count [this]
+       (queue-count @the-q))
+
+     IDeref
+     (-deref [this] (queue-deref the-q))
+
+     IFn
+     (-invoke [this]
+       (queue-pop the-q))
+     (-invoke [this it]
+       (queue-push the-q keyfn max-q-size it)
+       this)))
 
 (defn queue-by
   ([keyfn]
    (queue-by keyfn DEFAULT-QUEUE-SIZE))
   ([keyfn max-q-size]
-   (let [the-q (ref (internal-queue))
-         the-index (ref 0)]
-     (QueueByQueue. the-q
-                    the-index
-                    keyfn
-                    max-q-size))))
+   (QueueByQueue. (atom (internal-queue))
+                  keyfn
+                  max-q-size)))
+

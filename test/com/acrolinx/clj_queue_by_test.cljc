@@ -13,20 +13,23 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 (ns com.acrolinx.clj-queue-by-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest testing is]]
             [com.acrolinx.clj-queue-by :as tt]))
+
 
 (deftest quonj-test
   (let [t #'tt/quonj]
     (testing "Adding to empty"
       (let [it (t nil :x)]
-        (is (= clojure.lang.PersistentQueue
-             (type it)))
+        (is (= #?(:clj clojure.lang.PersistentQueue
+                  :cljs cljs.core.PersistentQueue)
+               (type it)))
         (is (= [:x] it))))
     (testing "Adding repeatedly"
       (let [it1 (t nil :x)
             it2 (t it1 :y)]
-        (is (= clojure.lang.PersistentQueue
+        (is (= #?(:clj clojure.lang.PersistentQueue
+                  :cljs cljs.core.PersistentQueue)
              (type it2)))
         (is (= [:x :y] it2))))))
 
@@ -104,36 +107,6 @@
       (is (= {:core :charlie :a :4} (q)))
       (is (= 0 (count q))))))
 
-;; FIXME: I'd feel better to have some real-world multi-threaded test
-;; here and run it a 1000 times or so.
-(deftest queue-multi-threaded-basic-test
-  (let [q (tt/queue-by :core)]
-
-    (testing "Adding many and get them back as expected"
-      (future (q {:core :alice   :a :1})
-              (q {:core :bob     :a :1})
-              (q {:core :alice   :a :2})
-              (q {:core :alice   :a :3})
-              (q {:core :bob     :a :2})
-              (q {:core :charlie :a :1})
-              (q {:core :charlie :a :2})
-              (q {:core :charlie :a :3})
-              (q {:core :charlie :a :4}))
-
-      ;; wait for the future to start
-      (Thread/sleep 100)
-      ;; all blocking on the deref of the future
-      (is (= {:core :alice   :a :1} @(future (q))))
-      (is (= {:core :bob     :a :1} @(future (q))))
-      (is (= {:core :charlie :a :1} @(future (q))))
-      (is (= {:core :alice   :a :2} @(future (q))))
-      (is (= {:core :bob     :a :2} @(future (q))))
-      (is (= {:core :charlie :a :2} @(future (q))))
-      (is (= {:core :alice   :a :3} @(future (q))))
-      (is (= {:core :charlie :a :3} @(future (q))))
-      (is (= {:core :charlie :a :4} @(future (q))))
-      (is (= 0 (count q))))))
-
 (deftest overflow-test
   (let [q (tt/queue-by :x 2)]
     (testing "No item added"
@@ -144,7 +117,8 @@
       (is (= 2 (count q))))
     (testing "Adding more values than allowed"
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo
+           #?(:clj clojure.lang.ExceptionInfo
+              :cljs cljs.core.ExceptionInfo)
            #"overflow"
            (q {:x 1})))
       (is (= 2 (count q)))))
@@ -152,7 +126,8 @@
     (testing "Adding more values than allowed (default size)"
       (dotimes [i @#'com.acrolinx.clj-queue-by/DEFAULT-QUEUE-SIZE] (q {:x 2}))
       (is (thrown-with-msg?
-           clojure.lang.ExceptionInfo
+           #?(:clj clojure.lang.ExceptionInfo
+              :cljs cljs.core.ExceptionInfo)
            #"overflow"
            (q {:x 1})))))
   (let [q (tt/queue-by :x nil)]
@@ -162,7 +137,7 @@
 
 (deftest deref-test
   (let [qb (tt/queue-by :i)
-        pq (clojure.lang.PersistentQueue/EMPTY)]
+        pq (#'com.acrolinx.clj-queue-by/persistent-empty-queue)]
 
     (testing "Empty queue"
       (is (= [pq {}]
@@ -199,42 +174,3 @@
             "two" pq}]
           @qb)))))
 
-(defn stress-reader [q max-reads]
-  (let [cnt (atom 0)
-        succ (atom {"t1" 0
-                    "t2" 0
-                    "t3" 0})]
-    (loop [it nil]
-      (swap! cnt inc)
-      (cond
-
-        (< max-reads @cnt)
-        @succ
-
-        (not (nil? it))
-        (do
-          (swap! succ update-in [(:name it)] inc)
-          ;; (printf "<%s" (:id it))
-          (recur (q)))
-
-        :else
-        (do
-          ;; (Thread/sleep 1)
-          (recur (q)))))))
-
-(defn stress-writer [q name n]
-  (dotimes [i n]
-    (q {:name name :id i})
-    ;; (printf ">%s" i)
-    ))
-
-(defn stress-main []
-  (let [q (tt/queue-by :name 2800)
-        r (future (stress-reader q 9000))
-        w1 (future (stress-writer q "t1" 900))
-        w2 (future (stress-writer q "t2" 900))
-        w3 (future (stress-writer q "t3" 900))]
-    (= @r {"t1" 900, "t2" 900, "t3" 900})))
-
-(deftest stress-test
-  (is (stress-main)))
