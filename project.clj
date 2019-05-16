@@ -20,9 +20,10 @@
   :plugins [[lein-doo "0.1.11"]
             [lein-cljsbuild "1.1.7"]]
 
-  :cljsbuild {:builds {:tests {:source-paths ["src" "test"]
-                               :compiler {:output-to "target/tests.js"
-                                          :main com.acrolinx.cljs-test-runner
-                                          :optimizations :simple}}}}
+  :cljsbuild
+  {:builds {:tests {:source-paths ["src" "test"]
+                    :compiler {:output-to "target/tests.js"
+                               :main com.acrolinx.cljs-test-runner
+                               :optimizations :simple}}}}
   :doo {:build "tests"
         :alias {:default [:nashorn]}})
