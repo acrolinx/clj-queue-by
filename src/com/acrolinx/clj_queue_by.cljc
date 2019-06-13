@@ -144,7 +144,9 @@
                    [[] {}]
                    queue-map)]
     {::selected (persistent-queue (sort-by ::id heads))
-     ::queued   (into {} (filter (fn [[k queue]] (not-empty queue)) tails))}))
+     ::queued   (into {} (filter
+                          (fn [[k queue]] (not-empty queue))
+                          tails))}))
 
 (defn- queue-pop
   "Pops an item from the queue.
