@@ -56,7 +56,8 @@
   Don't waste time checking for correct type as this is an internal fn
   and we know what to expect."
   [q x]
-  (if q (conj q x)
+  (if q
+    (conj q x)
     (persistent-queue x)))
 
 ;; This particular queue implementation
