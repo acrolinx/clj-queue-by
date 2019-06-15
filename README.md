@@ -284,7 +284,7 @@ availability of this software for everyone.
 ## Contributors
 
 * @replrep :computer: :mag:
-* @nblumoe :mag:
+* @nblumoe :computer: :mag:
 
 Type of contribution:
 
