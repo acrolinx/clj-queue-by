@@ -44,7 +44,7 @@
   ([] (persistent-empty-queue))
   ([x]
    (if (sequential? x)
-     (reduce conj (persistent-empty-queue) x)
+     (into (persistent-empty-queue) x)
      (conj (persistent-empty-queue) x))))
 
 (defn- quonj
