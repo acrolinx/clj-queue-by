@@ -9,4 +9,4 @@ jobs:
       script: lein doo once
     - stage: deploy
       script: lein deploy
-      if: branch=master AND event=push AND fork=false
+      if: branch=main AND event=push AND fork=false
