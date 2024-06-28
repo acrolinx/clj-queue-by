@@ -29,6 +29,11 @@ To use this library in your project, add the following to your
 
     [com.acrolinx.clj-queue-by "0.1.1"]
 
+If you use `deps.edn` as a dependency declaration file, add the following
+to `deps.edn`: 
+
+    com.acrolinx/clj-queue-by {:mvn/version "0.1.1"}
+
 To create a queue, `require` the `com.acrolinx.clj-queue-by` namespace
 and call `queue-by`:
 
